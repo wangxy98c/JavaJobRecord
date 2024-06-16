@@ -767,12 +767,11 @@ F["LoadDataSource"]
 G["AbstractRoutingDataSource"]--重载其中的两个方法-->D
 ```
 
-
 自定义一个注解，当它加在Service层或类上，表示方法或者类中的所有方法都是用某一个数据源。如果某个方法上有这个注解，将该方法需要使用的数据源名称存入ThreadLocal。将来使用Mybatis获取数据源名称时从ThreadLocal中拿到
     * 自定义切面：在切面中解析@DataSource注解。将标记的数据源存入ThreadLocal
         * Mapper执行时，需要DataSource。自动去AbstractRoutingDataSource类中查找需要的数据源，我们只需要从中返回ThreadLocal即可。（@override `determineCurrentLookupKey()`)
 
-与Demo不同的是，他的DynamicDataSource没有使用@Bean，而是采用了DruidConfig，且在他里面写死了配置文件的master和slave。这也是不能有更多数据源的原因
+与Demo不同的是，Ruoyi的DynamicDataSource没有使用@Bean，而是采用了DruidConfig，且在他里面写死了配置文件的master和slave。这也是不能有更多数据源的原因
 
 ### 网页上修改数据源
 
@@ -850,11 +849,12 @@ G["AbstractRoutingDataSource"]--重载其中的两个方法-->D
 ```mermaid
 flowchart 
 A(请求) --被拦截--> D(RepeatAbleRequestFilter过滤器)-.是JSON请求,需要解决重复读问题.->C
-C(RepeatAblereadRequestWrapper)-.请求相关信息存入.-> F(byte数组)
+C(RepeatAblereadRequestWrapper)-.请求相关信息存入.-> F(final byte数组)
 B(HttpServletRequest)--装饰者--> C
 F-."数据保存完以后".-> D --不是JSON或处理完,原流程继续--> E(RepeatSubmitIntercept拦截器)
-E--判断请求方法有注解--> G(合法性判断)
-F--提供请求信息-->G--从Rdis中取相关信息并判断合法性--> H(业务Controller)
+E--判断请求方法有注解--> G("preHandle()合法性判断",在此处根据请求的格式从不同地方拿到数据)
+F--提供请求信息-->E
+G--从Rdis中取相关信息并判断合法性--> H(业务Controller)
 ```
 
 ## 数据权限注解

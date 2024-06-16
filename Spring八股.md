@@ -180,7 +180,7 @@
 
    
 
-# Spring循环依赖
+# Spring环依赖
 
 Spring 框架通过使用三级缓存（其实就是三个Map）来解决这个问题，确保即使在循环依赖的情况下也能正确创建 Bean。
 
@@ -302,3 +302,346 @@ public interface PasswordEncoder {
 //官方推荐使用基于 bcrypt 强哈希函数的加密算法实现类
 ```
 
+# Spring注解
+
+## @SpringApplication
+
+**`@Configuration` + `@EnableAutoConfiguration` + `@ComponentScan`** 
+
+- **`@EnableAutoConfiguration`**：启用 SpringBoot 的**自动配置**机制
+- **`@ComponentScan`**：扫描**被`@Component` (`@Repository`,`@Service`,`@Controller`)注解**的 bean，注解默认会扫描该类所在的包下所有的类。
+- **`@Configuration`**：允许在 Spring 上下文中注册额外的 bean 或导入其他配置类
+
+## SpringBean相关
+
+### @Autowired
+
+自动导入对象到类中，被注入进的类同样要被 Spring 容器管理。
+
++ 默认按照`type`注入
+
+### @Component
+
+通用注解
+
+`@Repository`、`@Service`、`@Controller` 其实都是`@Component`。
+
+### @ResController
+
+**`@Controller`+`@ResponseBody`**
+
+`@Controller`：返回的是一个页面，基本用在MVC中
+
+`@ResController`：返回的是Json或xml形式的数据
+
+## @Scope
+
+```java
+@Bean
+@Scope("singleton")
+public Person personSingleton() {
+    return new Person();
+}
+```
+
+**singleton** : 唯一 bean 实例，Spring 中的 bean 默认都是单例的。
+
+**prototype** : 每次请求都会创建一个新的 bean 实例。
+
+**request** : 每一次 HTTP 请求都会产生一个新的 bean，该 bean 仅在当前 HTTP request 内有效。
+
+**session** : 每一个 HTTP Session（用户会话，从登录到退出） 会产生一个新的 bean，该 bean 仅在当前 HTTP session 内有效。
+
+~~global-session~~：Spring5中已经没有了
+
+## @Configuration
+
+一般用来声明配置类，**可以使用 `@Component`注解替代**，不过使用`@Configuration`注解声明配置类更加语义化
+
+## HTTP请求相关类型
+
++ GET、POST、PUT、DELETE、PATCH
+
+1.  `@GetMapping("users")`等价于`@RequestMapping(value="/users",method=RequestMethod.GET)`
+2. `@PostMapping("users")` 等价于`@RequestMapping(value="/users",method=RequestMethod.POST)`
+3. `@PutMapping("/users/{userId}")` 等价于`@RequestMapping(value="/users/{userId}",method=RequestMethod.PUT)`
+4. `@DeleteMapping("/users/{userId}")`
+5. `@PatchMapping("/profile")`：PUT 不够用了之后才用 PATCH
+
+## 前后端传值：参数中
+
+### @PathVariable和@RequestParam
+
+```java
+@GetMapping("/klasses/{klassId}/teachers")
+public List<Teacher> getKlassRelatedTeachers(
+         @PathVariable("klassId") Long klassId,
+         @RequestParam(value = "type", required = false) String type ) {
+...
+}
+```
+
+### @RequetBody
+
+用于读取 Request 请求（可能是 POST,PUT,DELETE,GET 请求）的 body 部分并且**Content-Type 为 application/json** 格式的数据，接收到数据之后会自动将数据绑定到 Java 对象上去。系统会使用**`HttpMessageConverter`**或者自定义的`HttpMessageConverter`将请求的 body 中的 **json 字符串转换为 java 对象**。
+
+## 读取配置信息
+
+```yaml
+# 配置文件
+wuhan2020: 2020年初武汉爆发了新型冠状病毒，疫情严重，但是，我相信一切都会过去！武汉加油！中国加油！
+
+my-profile:
+  name: Guide哥
+  email: koushuangbwcx@163.com
+
+library:
+  location: 湖北武汉加油中国加油
+  books:
+    - name: 天才基本法
+      description: 二十二岁的林朝夕在父亲确诊阿尔茨海默病这天，得知自己暗恋多年的校园男神裴之即将出国深造的消息——对方考取的学校，恰是父亲当年为她放弃的那所。
+    - name: 时间的秩序
+      description: 为什么我们记得过去，而非未来？时间“流逝”意味着什么？是我们存在于时间之内，还是时间存在于我们之中？卡洛·罗韦利用诗意的文字，邀请我们思考这一亘古难题——时间的本质。
+    - name: 了不起的我
+      description: 如何养成一个新习惯？如何让心智变得更成熟？如何拥有高质量的关系？ 如何走出人生的艰难时刻？
+```
+
+### @Value
+
+```java
+@Value("${wuhan2020}")
+String wuhan2020;
+```
+
+### @ConfigurationProperties
+
++ 像使用普通的 Spring bean 一样，将其注入到类中使用。（配置文件中写一个类的实例并注入）
+
+```java
+@Component
+@ConfigurationProperties(prefix = "library")
+class LibraryProperties {
+    @NotEmpty
+    private String location;
+    private List<Book> books;
+
+    @Setter
+    @Getter
+    @ToString
+    static class Book {
+        String name;
+        String description;
+    }
+  省略getter/setter
+  ......
+}
+
+```
+
+### @PropertySource
+
+`@PropertySource`读取指定 properties 文件
+
+```java
+@Component
+@PropertySource("classpath:website.properties")
+class WebSite {
+    @Value("${url}")
+    private String url;
+
+  省略getter/setter
+  ......
+}
+```
+
+## 参数校验
+
+- `@NotEmpty` 被注释的字符串的不能为 null 也不能为空
+- `@NotBlank` 被注释的字符串非 null，并且必须包含一个非空白字符
+- `@Null` 被注释的元素必须为 null
+- `@NotNull` 被注释的元素必须不为 null
+- `@AssertTrue` 被注释的元素必须为 true
+- `@AssertFalse` 被注释的元素必须为 false
+- `@Pattern(regex=,flag=)`被注释的元素必须符合指定的正则表达式
+- `@Email` 被注释的元素必须是 Email 格式。
+- `@Min(value)`被注释的元素必须是一个数字，其值必须大于等于指定的最小值
+- `@Max(value)`被注释的元素必须是一个数字，其值必须小于等于指定的最大值
+- `@DecimalMin(value)`被注释的元素必须是一个数字，其值必须大于等于指定的最小值
+- `@DecimalMax(value)` 被注释的元素必须是一个数字，其值必须小于等于指定的最大值
+- `@Size(max=, min=)`被注释的元素的大小必须在指定的范围内
+- `@Digits(integer, fraction)`被注释的元素必须是一个数字，其值必须在可接受的范围内
+- `@Past`被注释的元素必须是一个过去的日期
+- `@Future` 被注释的元素必须是一个将来的日期
+- ……
+
+### 验证请求体：RequestBody
+
+同时需要在方法的参数中加上 `@RequestBody @Valid`
+
+### 验证请求参数：Path Variables 和 Request Parameters
+
++ **在类上加上 `@Validated` 注解**
+
+## 异常处理
+
+### Controller层
+
+1. `@ControllerAdvice` :注解定义**全局异常处理类**
+2. `@ExceptionHandler` :注解声明**异常处理方法**
+
+```java
+@ControllerAdvice
+@ResponseBody
+public class GlobalExceptionHandler {
+
+    /**
+     * 请求参数异常处理
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<?> handleMethodArgumentNotValidException(MethodArgumentNotValidException ex, HttpServletRequest request) {
+       ......
+    }
+}
+```
+
+## JPA相关：
+
+JAVA持久化API
+
+### 表创建以及主键
+
+`@Entity`声明一个类对应一个数据库实体。
+
+`@Table` 设置表名
+
+`@Id`：声明一个字段为主键。
+
+> 使用`@Id`声明之后，我们还需要定义主键的生成策略。我们可以**使用 `@GeneratedValue` 指定主键生成策略**。@GeneratedValue`注解默认使用的策略是`GenerationType.AUTO。
+>
+> **@GeneratedValue(strategy = GenerationType.IDENTITY)等价于**通过 `@GenericGenerator`声明一个主键策略，然后 `@GeneratedValue`使用这个策略
+
+```java
+@Entity
+@Table(name = "role")
+public class Role {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY) //IDENTITY常用于MYSQL
+    private Long id;
+```
+
+### 设置字段类型
+
+`@Column` 声明字段。
+
+```java
+@Column(columnDefinition = "tinyint(1) default 1")
+private Boolean enabled;
+
+@Column(name = "user_name", nullable = false, length=32)
+private String userName;
+```
+
+### 指定不持久化
+
+`@Transient`：声明不需要与数据库映射的字段，在保存的时候不需要保存进数据库 
+
+### 其他
+
+`@Lob`:声明某个字段为大字段。
+
+可以使用**枚举类型**的字段，不过枚举字段要用`@Enumerated`注解修饰。
+
+1. `@CreatedDate`: 表示该字段为创建时间字段，在这个实体被 insert 的时候，会设置值
+
+2. `@CreatedBy` :表示该字段为创建人，在这个实体被 insert 的时候，会设置值
+
+   `@LastModifiedDate`、`@LastModifiedBy`同理。
+
+3. `@EnableJpaAuditing`：开启 JPA 审计功能。
+
+`@Modifying` 注解提示 JPA 该操作是修改操作,注意还要配合`@Transactional`注解使用
+
+- `@OneToOne` 声明一对一关系
+- `@OneToMany` 声明一对多关系
+- `@ManyToOne` 声明多对一关系
+- `@ManyToMany` 声明多对多关系
+
+## 事务
+
+`@Transactional`
+
+## Json处理
+
+**`@JsonIgnoreProperties` 作用在类上用于过滤掉特定字段不返回或者不解析**
+
+**`@JsonIgnore`一般用于类的属性上，作用和上面的`@JsonIgnoreProperties` 一样。**
+
+`@JsonFormat`一般用来格式化 json 数据。
+
+# Mybatis
+
+## 执行流程
+
+![image-20240519185128802](./Spring八股.assets/image-20240519185128802.png)
+
+## #{}和${}的区别
+
+**#{}方式能够很大程度防止sql注入(安全)，${}方式无法防止Sql注入**
+
+**#{} 是占位符**，做预编译处理，MyBatis在处理 #{ } 时，会将 SQL 中的 #{ } 编译为 ?，对应的变量自动加单引号
+
+**${} 是拼接符**，即字符串替换
+
+## XML映射文件中有哪些标签
+
+**`<select>、<insert>、<update>、<delete>`**
+
+> 在 MyBatis 中，每一个 `<select>`、 `<insert>`、 `<update>`、 `<delete>` 标签，都会被解析为一个 `MappedStatement` 对象。
+
+**`<resultMap>、 <parameterMap>、 <sql>、 <include>、 <selectKey>`**
+
+加上动态 sql 的 9 个标签， **`trim|where|set|foreach|if|choose|when|otherwise|bind`**
+
+> `<sql>` 为 sql 片段标签，通过 `<include>` 标签引入 sql 片段
+>
+> `<selectKey>` 为不支持自增的主键生成策略标签
+
+## Dao接口的工作原理是什么？Dao 接口里的方法，参数不同时，方法能重载
+
+最佳实践中，通常一个 xml 映射文件，都会写一个 Dao 接口与之对应。Dao 接口就是人们常说的 `Mapper` 接口
+
+接口的**全限名**，就是映射文件中的` namespace `的值；接口的**方法名**，就是映射文件中 `MappedStatement` 的 id 值；接口方法内的**参数**，就是传递给 sql 的参数。当调用接口方法时，**接口全限名+方法名**拼接字符串作为 key 值，可唯一定位一个 `MappedStatement`
+
+> Dao 接口里的方法可以重载，但是 Mybatis 的 xml 里面的 ID 不允许重复。
+>
+> **Mybatis 的 Dao 接口可以有多个重载方法，但是多个接口对应的映射必须只有一个，否则启动会报错**。
+>
+> 重载需要满足其一：
+>
+> 1. 仅有一个无参方法和一个有参方法
+>
+> 2. 多个有参方法时，参数数量必须一致。且使用相同的 `@Param` ，或者使用 `param1` 这种。
+>
+>    ```java
+>    Person queryById();
+>    Person queryById(@Param("id") Long id);
+>    Person queryById(@Param("id") Long id, @Param("name") String name);
+>    ```
+>
+> ```java
+> public interface StuMapper {
+>  List<Student> getAllStu();
+>  List<Student> getAllStu(@Param("id") Integer id);
+> }
+> ```
+>
+> ```xml
+> <select id="getAllStu" resultType="com.pojo.Student">
+>   select * from student
+>   <where>
+>     <if test="id != null">
+>       id = #{id}
+>     </if>
+>   </where>
+> </select>
+> ```
