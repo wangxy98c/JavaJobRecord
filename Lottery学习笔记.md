@@ -638,3 +638,41 @@ public class ActivityProcessImpl implements IActivityProcess {
 }
 ```
 
+## 门面接口封装
+
+ #
+
+## AOP
+
+分库分表的hash
+
+mybatis拦截器，拦截SQL语句，把表id添加到sql语句后 
+
+```
+@XxlJob("lotteryOrderMQStateJobHandler")
+public void lotteryOrderMQStateJobHandler() throws Exception {
+    // 验证参数
+    String jobParam = XxlJobHelper.getJobParam();
+    if (null == jobParam) {
+        logger.info("扫描用户抽奖奖品发放MQ状态[Table = 2*4] 错误 params is null");
+        return;
+    }
+//这里是从xxl-job处来填写（获得）要扫描哪些库的。不是在配置文件中 。格式为1,2,3这种
+//后续再分割
+```
+
+## Redis的竞争库存
+
+![image-20240703153712229](./Lottery学习笔记.assets/image-20240703153712229.png)
+
+独占竞态：一个拿到以后即便还有库存，其他也无法拿到
+
+分段竞态：还有库存就可以拿到锁。降低了锁的颗粒度。实际操作也并不复杂，只是把`活动ID+库存扣减后的值`一起作为分布式锁的Key
+
+> `lua脚本`、zk、jvm层，都可以处理，但经过验证 lua脚本会有一定的耗时，并发较高时会有问题
+
+# 面试题
+
+1. 表的设计
+
+   尽可能做到职责隔离，对应系统的具体实现上要拆分出；活动、算法、规则、策略、用户、订单等领域
