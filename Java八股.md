@@ -125,7 +125,7 @@ StringJoiner(CharSequence delimiter)
 - equals()：字符串比较。
 - intern();保存到常量池
 
-## ew String("dabin")会创建几个对象？
+## new String("dabin")会创建几个对象？
 
 两个（前提是字符串常量池中没有 "dabin" 这个字符串对象）
 
